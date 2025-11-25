@@ -1,5 +1,6 @@
 import torch
 import matplotlib.pyplot as plt
+import os
 
 from .dataset import get_dataloaders
 from .model import SimpleCNN
@@ -59,8 +60,12 @@ def main():
     _, _, test_loader = get_dataloaders()
 
     # Load model and best weights
+    checkpoint_path = "saved_models/best_model.pth"
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError("Checkpoint not found. Train first: python -m src.train")
+
     model = SimpleCNN().to(DEVICE)
-    model.load_state_dict(torch.load("saved_models/best_model.pth", map_location=DEVICE))
+    model.load_state_dict(torch.load(checkpoint_path, map_location=DEVICE))
     model.eval()
 
     # Take one batch from test set

@@ -1,16 +1,18 @@
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
 from .dataset import get_dataloaders
 from .model import SimpleCNN
-from .config import DEVICE, NUM_EPOCHE, LEARNING_RATE
+from .config import DEVICE, NUM_EPOCHS, LEARNING_RATE, RANDOM_SEED
+from .utils import set_seed
 
 
 
 def train_one_epoch(model, dataloader, criterion, optimizer):
     """
-    Train the mode for ONE epoch over the given dataloader
+    Train the model for ONE epoch over the given dataloader
 
     Returns:
         avg_loss, avg_accuracy
@@ -26,16 +28,16 @@ def train_one_epoch(model, dataloader, criterion, optimizer):
         images = images.to(DEVICE)
         labels = labels.to(DEVICE)
 
-        # FOrward pass: get model predictions for this batch
-        outputs = model(images) # shape: (B, NUM_CLASSES
+        # Forward pass: get model predictions for this batch
+        outputs = model(images)  # shape: (B, NUM_CLASSES)
         
         # Compute loss
         loss = criterion(outputs, labels)
 
-        # zero the gradient 
+        # zero the gradient
         optimizer.zero_grad()
 
-        # Backpropgation
+        # Backpropagation
         loss.backward()
 
         # update weights
@@ -90,6 +92,7 @@ def evaluate(model, dataloader, criterion):
 
 
 def main():
+    set_seed(RANDOM_SEED)
     # Get dataloader
     train_loader, val_loader, test_loader = get_dataloaders()
 
@@ -97,15 +100,16 @@ def main():
     model = SimpleCNN().to(DEVICE)
     print(f"Using device: {DEVICE}")
 
-    # DEfine loss function and optimizer 
-    criterion = nn.CrossEntropyLoss()           # STandard for classification 
+    # Define loss function and optimizer
+    criterion = nn.CrossEntropyLoss()           # Standard for classification
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
+    os.makedirs("saved_models", exist_ok=True)
     best_val_acc = 0.0
 
-    # Trainig loop 
-    for epoch in range(1, NUM_EPOCHE + 1):
-        print(f"\nEpoch {epoch}/{NUM_EPOCHE}")
+    # Training loop
+    for epoch in range(1, NUM_EPOCHS + 1):
+        print(f"\nEpoch {epoch}/{NUM_EPOCHS}")
 
         train_loss, train_acc = train_one_epoch(
             model, train_loader, criterion, optimizer
@@ -115,9 +119,9 @@ def main():
         )
 
         print(f"Train Loss: {train_loss:.4f} Train Acc: {train_acc:.4f}")
-        print(f"Val Loss: {val_loss:.4f} Train Acc: {val_acc:.4f}")
+        print(f"Val Loss:   {val_loss:.4f} Val Acc:   {val_acc:.4f}")
 
-        # Dave best model so far 
+        # Save best model so far
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             torch.save(model.state_dict(), "saved_models/best_model.pth")
@@ -128,7 +132,7 @@ def main():
     best_model = SimpleCNN().to(DEVICE)
     best_model.load_state_dict(torch.load("saved_models/best_model.pth", map_location=DEVICE))
 
-    test_loss, test_acc = evaluate(model, test_loader, criterion)
+    test_loss, test_acc = evaluate(best_model, test_loader, criterion)
     print(f"Test Loss: {test_loss:.4f} | Test Acc: {test_acc:.4f}")
 
 
